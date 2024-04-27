@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evades Reload</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f1f1f1;
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            text-align: center;
+            padding: 20px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            background-color: #ffffff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            margin-bottom: 20px;
+        }
+
+        input[type="text"],
+        input[type="password"] {
+            margin-bottom: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            width: 200px;
+        }
+
+        button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #ffffff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        /* CSS */
+        #changelogContainer {
+            position: fixed;
+            top: 50%;
+            right: 0;
+            transform: translateY(-50%);
+            background-color: #ffffff;
+            width: 300px;
+            padding: 20px;
+            border-left: 1px solid #ccc;
+            box-shadow: -2px 0 5px rgba(0,0,0,0.1);
+        }
+
+        .changelog {
+            margin: 0;
+        }
+
+        .changelog h2 {
+            margin-top: 0;
+            font-size: 20px;
+        }
+
+        .changelog ul {
+            padding-left: 20px;
+            list-style-type: square;
+        }
+
+        .changelog ul li {
+            margin-bottom: 5px;
+        }
+
+        #gameCanvas {
+            position: relative;
+        }
+
+        #playerName {
+            position: absolute;
+            top: -3px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div id="changelogContainer">
+        <div id="changelog" class="changelog">
+          <script src="https://cdn.lordicon.com/lordicon.js"></script>
+          <lord-icon
+              src="https://cdn.lordicon.com/abfverha.json"
+              trigger="morph"
+              state="morph-calendar "
+              style="width:50px;height:50px">
+          </lord-icon>
+            <ul>
+                <li>First update coming soon:</li>
+                <li>1 new map (Central Core)</li>
+                <li>1 new hero (Magmax)</li>
+                <li>....</li>
+            </ul>
+        </div>
+    </div>
+
+
+    <div class="container" id="loginContainer">
+        <h2>Welcome Player</h2>
+        <button id="registerButton">Register</button>
+        <button id="guestButton">Play as Guest</button>
+        <button id="loginButton">Login</button>
+    </div>
+
+    <div class="container" id="registerContainer" style="display:none;">
+        <h2>Register</h2>
+        <form id="registerForm">
+            <input type="text" name="username" placeholder="Username" required><br>
+            <input type="password" name="password" placeholder="Password" required><br>
+            <button type="submit">Register</button>
+        </form>
+    </div>
+
+    <div class="container" id="loginFormContainer" style="display:none;">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <input type="text" name="username" placeholder="Username" required><br>
+            <input type="password" name="password" placeholder="Password" required><br>
+            <button type="submit">Login</button>
+        </form>
+    </div>
+
+    <div class="container" id="characterSelectContainer" style="display:none;">
+        <h2>Select Your hero</h2>
+        <div id="characterList">
+            <button class="characterButton" id="character1Button">Magmax</button>
+            <button class="characterButton" id="character2Button">Rime(not lock)</button>
+            <!-- Добавьте кнопки для остальных персонажей по аналогии -->
+        </div>
+    </div>
+
+    <div class="container" id="gameContainer" style="display:none;">
+        <canvas id="gameCanvas" width="800" height="600"></canvas>
+    </div>
+
+
+
+
+
+    <script>      
+        // JavaScript
+        const changelogContainer = document.getElementById('changelogContainer');
+        const registerButton = document.getElementById('registerButton');
+        const guestButton = document.getElementById('guestButton');
+        const loginButton = document.getElementById('loginButton');
+
+        registerButton.addEventListener('click', hideChangelog);
+        guestButton.addEventListener('click', hideChangelog);
+        loginButton.addEventListener('click', hideChangelog);
+
+        function hideChangelog() {
+            changelogContainer.style.display = 'none';
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            const loginContainer = document.getElementById('loginContainer');
+            const registerContainer = document.getElementById('registerContainer');
+            const loginFormContainer = document.getElementById('loginFormContainer');
+            const characterSelectContainer = document.getElementById('characterSelectContainer');
+            const gameContainer = document.getElementById('gameContainer');
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+
+            let playerName = ""; // Переменная для имени игрока
+            let selectedCharacter = ""; // Выбранный персонаж
+            let playerX = canvas.width / 2; // начальные координаты персонажа
+            let playerY = canvas.height / 2;
+            const playerSize = 20; // Размер персонажа
+            const playerSpeed = 5; // Скорость перемещения персонажа
+
+            document.getElementById('registerButton').addEventListener('click', function() {
+                // Показать форму регистрации
+                loginContainer.style.display = 'none';
+                loginFormContainer.style.display = 'none';
+                registerContainer.style.display = 'block';
+            });
+
+            document.getElementById('guestButton').addEventListener('click', function() {
+                // Игра как гость
+                console.log('Playing as Guest');
+                playerName = "Guest" + Math.floor(Math.random() * 1000); // Генерируем случайное имя гостя
+                loginContainer.style.display = 'none';
+                loginFormContainer.style.display = 'none';
+                showCharacterSelect();
+            });
+
+            document.getElementById('loginButton').addEventListener('click', function() {
+                // Вход
+                console.log('Logging in...');
+                loginContainer.style.display = 'none';
+                registerContainer.style.display = 'none';
+                loginFormContainer.style.display = 'block';
+            });
+
+            document.getElementById('registerForm').addEventListener('submit', function(event) {
+                // Регистрация
+                event.preventDefault();
+                const username = document.querySelector('#registerForm input[name="username"]').value;
+                if (username) {
+                    playerName = username; // Присваиваем имя из поля регистрации
+                    console.log('Registered as:', playerName);
+                    loginContainer.style.display = 'none';
+                    registerContainer.style.display = 'none';
+                    showCharacterSelect();
+                } else {
+                    alert('Please fill in all fields.');
+                }
+            });
+
+            document.getElementById('loginForm').addEventListener('submit', function(event) {
+                // Вход по имени пользователя
+                event.preventDefault();
+                const username = document.querySelector('#loginForm input[name="username"]').value;
+                if (username) {
+                    playerName = username; // Присваиваем имя из поля входа
+                    console.log('Logged in as:', playerName);
+                    loginContainer.style.display = 'none';
+                    loginFormContainer.style.display = 'none';
+                    showCharacterSelect();
+                } else {
+                    alert('Please fill in all fields.');
+                }
+            });
+
+            function showCharacterSelect() {
+                characterSelectContainer.style.display = 'block';
+            }
+
+            const character1Button = document.getElementById('character1Button');
+            const character2Button = document.getElementById('character2Button');
+
+            character1Button.addEventListener('click', function() {
+                selectCharacter('Magmax'); // Выбор персонажа 1
+            });
+
+            character2Button.addEventListener('click', function() {
+                selectCharacter('Rime(not relisent)'); // Выбор персонажа 2
+            });
+
+            function selectCharacter(character) {
+                selectedCharacter = character; // Установка выбранного персонажа
+                characterSelectContainer.style.display = 'none'; // Скрытие меню выбора персонажа
+                showGame(); // Отображение игры с выбранным персонажем
+            }
+
+            function showGame() {
+                gameContainer.style.display = 'block';
+                draw();
+            }
+
+            function draw() {
+                // Очистка холста
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Установка цвета персонажа
+                ctx.fillStyle = 'red'; // Цвет персонажа Magmax
+
+                // Рисуем персонажа
+                ctx.beginPath();
+                ctx.arc(playerX, playerY, playerSize, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Отображение имени игрока
+                ctx.font = '12px Arial';
+                ctx.fillStyle = 'black';
+                ctx.textAlign = 'center';
+                ctx.fillText(playerName, playerX, playerY - playerSize - 3);
+
+                let targetX = playerX; // Целевая позиция по оси X
+let targetY = playerY; // Целевая позиция по оси Y
+
+document.addEventListener('keydown', function(event) {
+    const key = event.key.toLowerCase();
+    switch (key) {
+        case 'w':
+            targetY -= playerSpeed;
+            break;
+        case 'a':
+            targetX -= playerSpeed;
+            break;
+        case 's':
+            targetY += playerSpeed;
+            break;
+        case 'd':
+            targetX += playerSpeed;
+            break;
+    }
+});
+
+function smoothMovement() {
+    // Плавное движение к целевой позиции
+    playerX += (targetX - playerX) * 0.1;
+    playerY += (targetY - playerY) * 0.1;
+}
+
+setInterval(function() {
+    smoothMovement();
+}, 1000 / 60); // Обновление каждый кадр (60 кадров в секунду)
+
+
+function draw() {
+    // Очистка холста
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    // Установка цвета персонажа
+    ctx.fillStyle = 'red'; // Цвет персонажа Magmax
+
+    // Рисуем персонажа
+    ctx.beginPath();
+    ctx.arc(playerX, playerY, playerSize, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Отображение имени игрока
+    ctx.font = '12px Arial';
+    ctx.fillStyle = 'black';
+    ctx.textAlign = 'center';
+    ctx.fillText(playerName, playerX, playerY - playerSize - 3);
+
+    requestAnimationFrame(draw);
+}
+
+
+                requestAnimationFrame(draw);
+            }
+
+        });
+    </script> 
+</body>
+</html>
+
+
